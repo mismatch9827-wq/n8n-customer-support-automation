@@ -1,126 +1,172 @@
-# AI Customer Support Automation Platform
+# SupportFlow AI
 
-A capstone implementation of an AI-assisted support operation. Customers submit tickets in a Streamlit portal; n8n registers, classifies, routes, monitors, and analyzes those tickets using OpenAI, Google Sheets, Gmail, and Slack.
+An AI-powered customer-support automation platform built with **Streamlit**, **n8n**, **Google Gemini**, **Google Sheets**, and **Gmail**. It receives support requests, classifies their urgency, routes them to the right team, monitors SLA risk, and captures customer feedback.
 
-## 1. Problem analysis
+## What it solves
 
-### Business context
+Manual ticket handling creates slow responses, inconsistent priority decisions, missed escalations, and limited visibility into recurring customer problems. SupportFlow AI creates a repeatable workflow from customer request through follow-up.
 
-Growing software companies receive support requests through email, web forms, chat, and social platforms. A manual support desk cannot consistently decide urgency, prevent requests from being overlooked, or provide timely updates at scale.
+## Key capabilities
 
-### Stakeholders and pain points
+- Customer portal to submit tickets, check ticket status, and send feedback
+- Automatic ticket registration and acknowledgment email
+- Gemini-powered category, priority, team, and rationale classification
+- Urgent email escalation for critical tickets
+- Daily SLA audit for open tickets older than 24 hours
+- Feedback sentiment analysis and service-improvement logging
 
-| Stakeholder | Need | Current pain |
-|---|---|---|
-| Customers | Fast acknowledgement and accurate resolution | Slow and inconsistent replies |
-| Support agents | Clear queue and ownership | Manual sorting and duplicate effort |
-| Engineering/Billing teams | Relevant, urgent escalations | Critical issues arrive late or incomplete |
-| Support manager | SLA visibility and trends | No reliable operational reporting |
-
-### Objectives and success measures
-
-- Register every web ticket with a unique ID and acknowledgment email.
-- Use AI to produce a category, priority, rationale, and destination team.
-- Alert Slack for critical issues and forward work to the appropriate team.
-- Surface open tickets older than 24 hours every morning at 9 AM.
-- Capture feedback and sentiment to identify recurring themes.
-
-Suggested KPIs: first-response time, average resolution time, SLA breach count, priority distribution, CSAT rating, negative-feedback rate, and top issue themes.
-
-## 2. Architecture
+## Architecture
 
 ```mermaid
 flowchart LR
-    U[Customer] --> S[Streamlit portal]
-    S --> W1[n8n: intake]
-    W1 --> G[Google Sheets: Tickets]
-    W1 --> M[Gmail acknowledgment]
-    G --> W2[n8n: AI triage]
-    W2 --> O[OpenAI]
-    W2 --> W3[n8n: routing]
-    W3 --> SL[Slack critical alert]
-    W3 --> TM[Gmail team assignment]
-    C[Daily 9 AM] --> W4[n8n: SLA audit]
-    W4 --> SL
-    S --> W5[n8n: feedback]
-    W5 --> O
-    W5 --> F[Google Sheets: Feedback]
+    C[Customer] --> UI[Streamlit portal]
+    UI --> W1[Workflow 1: ticket ingestion]
+    W1 --> T[(Google Sheets: Tickets)]
+    W1 --> A[Gmail acknowledgment]
+    T --> W2[Workflow 2: Gemini triage]
+    W2 --> G[Google Gemini]
+    W2 --> W3[Workflow 3: escalation and routing]
+    W3 --> E[Gmail urgent/team email]
+    S[Daily 9 AM schedule] --> W4[Workflow 4: SLA audit]
+    W4 --> E
+    UI --> W5[Workflow 5: feedback processing]
+    W5 --> G
+    W5 --> F[(Google Sheets: Feedback)]
+    UI --> W6[Workflow 6: ticket-status lookup]
 ```
 
-### Data model
+## Project structure
 
-Create a Google Spreadsheet with two tabs.
+```text
+app.py                  Streamlit customer portal
+workflows/              Importable n8n workflow JSON files
+.env.example            Local webhook configuration template
+requirements.txt        Python dependencies
+```
 
-**Tickets** (use these headers exactly): `Ticket ID`, `Name`, `Email`, `Category`, `Description`, `Status`, `Priority`, `Created At`, `Assigned Team`, `AI Rationale`.
+## Requirements
 
-**Feedback**: `Ticket ID`, `Rating`, `Comments`, `Sentiment`, `Theme`, `Action Required`, `Received At`.
+- Python 3.10+
+- Docker Desktop and a local n8n instance
+- Google account for Google Sheets and Gmail
+- Google Gemini API key
 
-## 3. Workflow inventory (25 nodes)
+## Quick start
 
-| # | Workflow | Nodes | Purpose |
-|---|---|---:|---|
-| 1 | Ticket Collection & Ingestion | 4 | Receive a ticket, normalize it, create its register entry, and acknowledge it. |
-| 2 | AI Classification & Priority Triage | 5 | Detect new rows, ask OpenAI for structured triage, parse it, evaluate urgency, and update the row. |
-| 3 | Smart Escalation & Routing | 5 | Route priority/category, alert Slack for critical incidents, forward to a team, and return a result. |
-| 4 | Daily SLA & Overdue Ticket Audit | 5 | Run daily, read tickets, identify open tickets over 24 hours, summarize them, and notify managers. |
-| 5 | Feedback & Sentiment Processing | 6 | Receive feedback, analyze sentiment, log it, wait briefly, send thanks, and confirm receipt. |
+### 1. Start n8n
 
-### Import and configure the n8n JSON files
+Start your Docker-hosted n8n instance and open:
 
-1. In n8n, create credentials for Google Sheets OAuth2, Gmail OAuth2, Slack OAuth2, and OpenAI.
-2. Import each file from [`workflows`](workflows). Open every node carrying `REPLACE_...` and choose its real credential, Spreadsheet ID, or Slack channel.
-3. Workflow 1 publishes `POST /webhook/support-ticket`; Workflow 3 publishes `POST /webhook/route-ticket`; Workflow 5 publishes `POST /webhook/ticket-feedback`.
-4. Activate workflow 1, then workflow 2, 4, and 5. Run workflow 3 through an **Execute Workflow** node after `Update Triage Fields`, or invoke its webhook from that step with an HTTP Request node. This keeps routing reusable across future channels such as Gmail or a chatbot.
-5. Use a low-privilege Google account for this project and never place API keys in workflow JSON or source control.
+```text
+http://localhost:5678
+```
 
-### Important configuration notes
+### 2. Configure the Streamlit app
 
-- The OpenAI nodes instruct the model to return JSON. Keep the `gpt-4o-mini` model or select another enabled low-cost structured-output model.
-- In workflow 5, look up the ticket's customer email before the Gmail node (or include `email` in the feedback request) so the thank-you email has a valid recipient.
-- The AI workflow triggers when a row is added. For a production database, replace the spreadsheet trigger with a queue or database event to avoid polling limits.
-- The status tab calls `POST /webhook/ticket-status`. Add a small status-lookup endpoint in n8n for deployment: Webhook → Google Sheets Read/Filter by Ticket ID or Email → Respond to Webhook. It is intentionally separated from the five assessed automation workflows to preserve the required 25-node architecture.
-
-## 4. Local setup
-
-### Prerequisites
-
-- Python 3.10 or newer
-- An n8n instance (n8n Cloud or self-hosted)
-- Connected Google, Gmail, Slack, and OpenAI accounts
-
-### Run the portal
-
-```bash
+```powershell
 python -m venv .venv
-# Windows PowerShell
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 Copy-Item .env.example .env
+```
+
+Edit `.env`:
+
+```env
+N8N_WEBHOOK_BASE_URL=http://localhost:5678/webhook
+```
+
+Run the portal:
+
+```powershell
 streamlit run app.py
 ```
 
-Edit `.env` and set `N8N_WEBHOOK_BASE_URL` to the **production** n8n webhook base URL. The n8n editor's test URL uses `/webhook-test/` and only works while listening for a test event.
+`app.py` loads `.env` automatically. Do not commit `.env`; it is excluded by `.gitignore`.
 
-`app.py` loads the local `.env` file automatically through `python-dotenv`, so no separate PowerShell environment-variable command is required.
+## Google Sheets setup
 
-The app has defensive HTTP handling for timeouts, connection failures, non-success status codes, malformed JSON, and unconfigured placeholder URLs.
+Create one spreadsheet with these two tabs. Header names must match exactly.
 
-## 5. Test plan
+### `Tickets`
 
-1. Submit a technical ticket. Verify a Tickets row and acknowledgment email.
-2. Submit a data-loss or outage description. Verify OpenAI returns `Critical`, then verify the Slack alert and team email.
-3. Change a ticket's `Created At` to over 24 hours ago while its status remains Open. Execute workflow 4 and verify the manager digest.
-4. Submit a 1-star feedback response mentioning slow support. Verify negative sentiment, action-required flag, Feedback row, and thank-you message.
-5. Test an invalid webhook URL in `.env`; verify that the UI displays a helpful error instead of crashing.
+| Ticket ID | Name | Email | Category | Description | Status | Priority | Created At | Assigned Team | AI Rationale |
+|---|---|---|---|---|---|---|---|---|---|
 
-## 6. Repository map
+### `Feedback`
 
+| Ticket ID | Rating | Comments | Sentiment | Theme | Action Required | Received At |
+|---|---|---|---|---|---|---|
+
+Copy the spreadsheet ID from the URL:
+
+```text
+https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit
 ```
-app.py                         Streamlit customer portal
-workflows/01-...json           Five importable n8n workflow templates
-README.md                      Architecture and setup guide
-presentation-outline.md        11-slide presentation content
-demo-video-script.md           7–8 minute demo narration
-requirements.txt               Python dependencies
-.env.example                   Safe webhook configuration template
+
+## n8n workflows
+
+Import all JSON files in the [`workflows`](workflows) folder. Replace every `REPLACE_...` value with your own credential, spreadsheet ID, email address, or channel value before activating a workflow.
+
+| Workflow | Trigger | Purpose |
+|---|---|---|
+| 01 — Ticket Collection & Ingestion | `POST /webhook/support-ticket` | Registers a ticket and sends acknowledgment email. |
+| 02 — AI Classification & Priority Triage | New Google Sheets row | Gemini classifies category, priority, team, and rationale. |
+| 03 — Smart Escalation & Routing | `POST /webhook/route-ticket` | Sends urgent email for critical tickets; forwards others to the team. |
+| 04 — Daily SLA & Overdue Ticket Audit | Daily at 9 AM | Identifies open tickets older than 24 hours. |
+| 05 — Feedback & Sentiment Processing | `POST /webhook/ticket-feedback` | Uses Gemini to evaluate sentiment and logs feedback. |
+| 06 — Check Ticket Status | `POST /webhook/ticket-status` | Finds a ticket by ticket ID or customer email. |
+
+### Required n8n credentials
+
+- **Google Sheets OAuth2** — used by Workflows 1, 2, 4, 5, and 6
+- **Gmail OAuth2** — used by Workflows 1, 3, and 5
+- **Google Gemini API** — used by Workflows 2 and 5
+
+### Connect Workflow 2 to Workflow 3
+
+Workflow 3 is reusable and exposes its own webhook. After `Update Triage Fields` in Workflow 2, add an **HTTP Request** node:
+
+```text
+Method: POST
+URL: http://localhost:5678/webhook/route-ticket
 ```
+
+Send a JSON body containing the ticket details:
+
+```json
+{
+  "ticketId": "={{ $json['Ticket ID'] }}",
+  "name": "={{ $json.Name }}",
+  "email": "={{ $json.Email }}",
+  "category": "={{ $json.category }}",
+  "priority": "={{ $json.priority }}",
+  "description": "={{ $json.Description }}"
+}
+```
+
+In Workflow 3, set its Webhook node response mode to **Using ‘Respond to Webhook’ Node**, then replace `critical-support@yourcompany.com` with your team’s actual email address.
+
+## Test the platform
+
+1. Activate Workflow 1, then submit a ticket in Streamlit.
+2. Confirm a row appears in the `Tickets` tab and the acknowledgment email arrives.
+3. Activate Workflow 2. Submit a ticket that mentions an outage or production failure; confirm Gemini marks it `Critical`.
+4. Activate Workflow 3 and confirm the urgent escalation email reaches your configured team address.
+5. Activate Workflow 5 and submit feedback from the portal; confirm the Feedback tab is populated.
+6. Activate Workflow 6 and use the status tab with a ticket ID or email.
+
+For local development, always use the **production webhook URL** (`/webhook/...`) after activating the workflow. The test endpoint (`/webhook-test/...`) only works while n8n is listening for a manual test run.
+
+## Security
+
+- Keep API keys, OAuth tokens, and production URLs in `.env` or n8n Credentials—not source files.
+- `.env`, `.venv`, Python cache, and Streamlit secrets are excluded from Git.
+- Use least-privilege credentials and replace demo recipient addresses before deployment.
+
+## Future improvements
+
+- Replace Google Sheets with PostgreSQL for higher ticket volume
+- Add duplicate-ticket detection
+- Add email, chatbot, and social-media intake channels
+- Add a manager dashboard for SLA, CSAT, and recurring issue trends
