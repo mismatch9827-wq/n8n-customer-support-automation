@@ -1,0 +1,238 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "support-ticket",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "a12f717a-8f58-425e-b1c6-1b125ab8f450",
+      "name": "Ticket Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        32
+      ],
+      "webhookId": "b10a9316-42fc-4e33-af57-f17d557c3117"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b=$json.body ?? $json;\nreturn [{json:{...b, submittedAt:b.submittedAt ?? new Date().toISOString(), status:'Open', priority:'Pending AI triage', assignedTeam:'Unassigned'}}];"
+      },
+      "id": "a3ac2026-9e2d-497f-894a-cfc3065708ed",
+      "name": "Normalize Ticket & Timestamp",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1jQHfrPtqLy78za1Bp1LTWbVPW3luXop3WdWD8_-GYqw",
+          "mode": "list",
+          "cachedResultName": "Support Ticket Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1jQHfrPtqLy78za1Bp1LTWbVPW3luXop3WdWD8_-GYqw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Tickets",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1jQHfrPtqLy78za1Bp1LTWbVPW3luXop3WdWD8_-GYqw/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Ticket ID": "={{ $json.ticketId }}",
+            "Name": "={{ $json.name }}",
+            "Email": "={{ $json.email }}",
+            "Category": "={{ $json.category }}",
+            "Description": "={{ $json.description }}",
+            "Created At": "={{ $json.submittedAt }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Ticket ID",
+              "displayName": "Ticket ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Created At",
+              "displayName": "Created At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assigned Team",
+              "displayName": "Assigned Team",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Rationale",
+              "displayName": "AI Rationale",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "714094f9-5643-4187-a186-cdd37187f547",
+      "name": "Register Ticket in Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        336,
+        32
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OYTXSWW5LQRSZVoK",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Normalize Ticket & Timestamp').item.json.email }}",
+        "subject": "=We received your support request: {{ $('Normalize Ticket & Timestamp').item.json.ticketId }}",
+        "emailType": "text",
+        "message": "=Hi {{ $('Normalize Ticket & Timestamp').item.json.name }},\n\nThanks for contacting support. Your ticket {{ $('Normalize Ticket & Timestamp').item.json.ticketId }} is open and has been queued for AI-assisted triage. We will update you shortly.\n\nSupport Team",
+        "options": {}
+      },
+      "id": "528460c6-13db-4104-8ef8-7bbefd04d86e",
+      "name": "Send Auto-Acknowledgment",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        608,
+        32
+      ],
+      "webhookId": "d2850fc2-7136-4e17-8f6e-f4224b9aad3c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tlpLluzK9985dvIf",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Ticket Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Ticket & Timestamp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Ticket & Timestamp": {
+      "main": [
+        [
+          {
+            "node": "Register Ticket in Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Register Ticket in Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Send Auto-Acknowledgment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a861a9b893c53b1a742f1109903fcd1d0a75c76b66f6810b093a68daa73240de"
+  }
+}

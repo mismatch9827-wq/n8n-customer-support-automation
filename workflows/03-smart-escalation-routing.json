@@ -1,0 +1,183 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "route-ticket",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "dc51db1d-169e-4044-bef1-5b1b34b61128",
+      "name": "Triage Routing Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        320
+      ],
+      "webhookId": "d0cd00b3-f5b2-499d-9e1c-c251bff5dff0"
+    },
+    {
+      "parameters": {
+        "sendTo": "mismatch9827@gmail.com",
+        "subject": "🚨 URGENT: Critical Support Ticket {{ ($json.body ?? $json).ticketId }} — Immediate Action Required",
+        "emailType": "text",
+        "message": "=URGENT ESCALATION — IMMEDIATE ACTION REQUIRED\n\nA critical customer support ticket has been detected.\n\nTicket ID: {{ ($json.body ?? $json).ticketId }}\nCustomer: {{ ($json.body ?? $json).name }} ({{ ($json.body ?? $json).email }})\nCategory: {{ ($json.body ?? $json).category }}\nPriority: {{ ($json.body ?? $json).priority }}\nDescription: {{ ($json.body ?? $json).description }}\n\nPlease acknowledge and begin investigation immediately.",
+        "options": {}
+      },
+      "id": "1d3781cb-8977-4f64-9b9f-6ff118354c63",
+      "name": "Send Urgent Critical Escalation Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -192,
+        192
+      ],
+      "webhookId": "f3d1b0c1-795d-41ea-b689-022b8bbf5747",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tlpLluzK9985dvIf",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "mismatch9827@gmail.com",
+        "subject": "=[{{ ($json.body ?? $json).priority }}] Ticket {{ ($json.body ?? $json).ticketId }} assigned",
+        "emailType": "text",
+        "message": "=A ticket has been routed to your team.\n\nTicket: {{ ($json.body ?? $json).ticketId }}\nCategory: {{ ($json.body ?? $json).category }}\nPriority: {{ ($json.body ?? $json).priority }}\nDescription: {{ ($json.body ?? $json).description }}",
+        "options": {}
+      },
+      "id": "614cca7e-65bc-456e-a684-0d54e4917b8b",
+      "name": "Forward Ticket to Team",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -192,
+        432
+      ],
+      "webhookId": "f9a931b1-a651-40bd-ac7e-0a4e715ff62c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tlpLluzK9985dvIf",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ticketId\": \"{{$json.body.ticketId ?? $json.ticketId}}\", \"status\": \"Routed\"}",
+        "options": {}
+      },
+      "id": "fb2567ed-7636-48e2-b89a-538a8d13a326",
+      "name": "Return Routing Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        80,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.priority }}",
+                    "rightValue": "Critical",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "9b294fc7-6e2e-4d23-96bd-12c076b83caa"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -496,
+        320
+      ],
+      "id": "f4652310-d2a8-4a06-a7e4-7595236b77e6",
+      "name": "Route by Priority and Category"
+    }
+  ],
+  "connections": {
+    "Triage Routing Webhook": {
+      "main": [
+        [
+          {
+            "node": "Route by Priority and Category",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Urgent Critical Escalation Email": {
+      "main": [
+        [
+          {
+            "node": "Return Routing Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Forward Ticket to Team": {
+      "main": [
+        [
+          {
+            "node": "Return Routing Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Priority and Category": {
+      "main": [
+        [
+          {
+            "node": "Send Urgent Critical Escalation Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Forward Ticket to Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a861a9b893c53b1a742f1109903fcd1d0a75c76b66f6810b093a68daa73240de"
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ticket-status",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b49da1cb-deec-48ef-9b45-9538d8ceee6e",
+      "name": "Status Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        32
+      ],
+      "webhookId": "18611a20-4126-4358-8e62-135ec3001410"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1jQHfrPtqLy78za1Bp1LTWbVPW3luXop3WdWD8_-GYqw",
+          "mode": "list",
+          "cachedResultName": "Support Ticket Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1jQHfrPtqLy78za1Bp1LTWbVPW3luXop3WdWD8_-GYqw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Tickets",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1jQHfrPtqLy78za1Bp1LTWbVPW3luXop3WdWD8_-GYqw/edit#gid=0"
+        },
+        "options": {}
+      },
+      "id": "3a9a4120-1ab5-4395-be2a-2abb1bf2a1f7",
+      "name": "Read Tickets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        144,
+        32
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OYTXSWW5LQRSZVoK",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const search = $('Status Webhook').item.json.body?.query || $('Status Webhook').item.json.body?.ticketId || $('Status Webhook').item.json.body?.email || $('Status Webhook').item.json.body?.identifier || '';\nconst searchTerm = search.toString().trim().toLowerCase();\n\nconst found = items.find(row => \n  (row.json['Ticket ID'] && row.json['Ticket ID'].toString().toLowerCase() === searchTerm) || \n  (row.json['Email'] && row.json['Email'].toString().toLowerCase() === searchTerm)\n);\n\nif (found) {\n  return [{ json: { success: true, ticketId: found.json['Ticket ID'], status: found.json['Status'] || found.json['status'] || 'Open', category: found.json['Category'], priority: found.json['Priority'] } }];\n} else {\n  return [{ json: { success: false, error: 'Ticket not found. Please check your ID or email.' } }];\n}"
+      },
+      "id": "ae01b23c-1c58-4ad2-a3cf-872013f19584",
+      "name": "Find Ticket",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "f10f8981-52cd-4aeb-8f38-90afa9cea76a",
+      "name": "Return Status",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        592,
+        32
+      ]
+    }
+  ],
+  "connections": {
+    "Status Webhook": {
+      "main": [
+        [
+          {
+            "node": "Read Tickets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Tickets": {
+      "main": [
+        [
+          {
+            "node": "Find Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Ticket": {
+      "main": [
+        [
+          {
+            "node": "Return Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a861a9b893c53b1a742f1109903fcd1d0a75c76b66f6810b093a68daa73240de"
+  }
+}

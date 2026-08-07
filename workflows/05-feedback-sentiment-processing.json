@@ -1,0 +1,318 @@
+{
+  "name": "05 - Feedback and Sentiment Processing",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ticket-feedback",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "1f0f597a-ddbc-4ccd-8da9-11e2f7edb2d4",
+      "name": "Feedback Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        -96
+      ],
+      "webhookId": "33b2ccbe-d297-45d3-88e5-5d55a928cedf"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "Rating: {{$json.body.rating}}/5\nComments: {{$json.body.comments}}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "builtInTools": {},
+        "options": {
+          "systemMessage": "Analyze customer support feedback. Return only JSON: sentiment (Positive|Neutral|Negative), theme (one short topic), actionRequired (true|false). actionRequired is true for rating <=2 or escalation-worthy feedback.",
+          "maxOutputTokens": 150,
+          "temperature": 0.1
+        }
+      },
+      "id": "6108ce89-98eb-4a69-92be-1f8fba94f0eb",
+      "name": "Gemini Sentiment Analysis",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        144,
+        -96
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "68Hd1N3Vb0nZDOdb",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.content?.parts?.[0]?.text ?? $json.candidates?.[0]?.content?.parts?.[0]?.text ?? $json.message?.content ?? $json.text ?? '{}';\nconst ai = typeof raw === 'string' ? JSON.parse(raw.replace(/^```json\\s*|\\s*```$/g, '')) : raw;\nconst form = $('Feedback Webhook').item.json.body ?? {};\nreturn [{json:{...form,...ai,receivedAt:form.submittedAt ?? new Date().toISOString()}}];"
+      },
+      "id": "2d93f545-92bf-4391-8cbe-edd0c0bc30b2",
+      "name": "Combine Feedback and Gemini Sentiment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        -272
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1jQHfrPtqLy78za1Bp1LTWbVPW3luXop3WdWD8_-GYqw",
+          "mode": "list",
+          "cachedResultName": "Support Ticket Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1jQHfrPtqLy78za1Bp1LTWbVPW3luXop3WdWD8_-GYqw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Feedback",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Ticket ID": "={{ $json.ticketId }}",
+            "Rating": "={{ $json.rating }}",
+            "Comments": "={{ $json.comments }}",
+            "Sentiment": "={{ $json.sentiment }}",
+            "Theme": "={{ $json.theme }}",
+            "Action Required": "={{ $json.actionRequired }}",
+            "Received At": "={{ $json.receivedAt }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Ticket ID",
+              "displayName": "Ticket ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Rating",
+              "displayName": "Rating",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Comments",
+              "displayName": "Comments",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Theme",
+              "displayName": "Theme",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Action Required",
+              "displayName": "Action Required",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Received At",
+              "displayName": "Received At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "6468ff5e-6b54-4efd-a9b4-4880c3983447",
+      "name": "Log Feedback in Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        672,
+        -208
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OYTXSWW5LQRSZVoK",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "f494f95b-4a92-42aa-bb40-63af302c061f",
+      "name": "Wait Before Thank You",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        848,
+        -96
+      ],
+      "webhookId": "d21bd60e-7672-4430-886d-ee853b384734"
+    },
+    {
+      "parameters": {
+        "sendTo": "mismatch9827@gmail.com",
+        "subject": "Thank you for your support feedback",
+        "emailType": "text",
+        "message": "Thank you for sharing your feedback on ticket {{ $json.ticketId }}. We value your input and use it to improve our support experience.",
+        "options": {}
+      },
+      "id": "741e4473-7e2f-465d-8bca-4f4eee8fa50d",
+      "name": "Send Thank You Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1072,
+        -96
+      ],
+      "webhookId": "aecb1296-4b37-4648-a510-a224e1a6aeda",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tlpLluzK9985dvIf",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"received\":true,\"message\":\"Thank you for your feedback\"}",
+        "options": {}
+      },
+      "id": "3f6b3c0f-97fc-4beb-8b02-6c4458fb3b21",
+      "name": "Confirm Feedback Receipt",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1296,
+        -96
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Feedback Webhook": {
+      "main": [
+        [
+          {
+            "node": "Gemini Sentiment Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Sentiment Analysis": {
+      "main": [
+        [
+          {
+            "node": "Combine Feedback and Gemini Sentiment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Feedback and Gemini Sentiment": {
+      "main": [
+        [
+          {
+            "node": "Log Feedback in Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Feedback in Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Wait Before Thank You",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Before Thank You": {
+      "main": [
+        [
+          {
+            "node": "Send Thank You Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Thank You Email": {
+      "main": [
+        [
+          {
+            "node": "Confirm Feedback Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "7c98b1cf-1f27-4f13-8114-0adec277680f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a861a9b893c53b1a742f1109903fcd1d0a75c76b66f6810b093a68daa73240de"
+  },
+  "nodeGroups": [],
+  "id": "XViUXAIs36w7VocA",
+  "tags": []
+}

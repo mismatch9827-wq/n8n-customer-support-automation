@@ -1,0 +1,157 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * *"
+            }
+          ]
+        }
+      },
+      "id": "09dba4f9-9f27-4d8c-951c-261b91209674",
+      "name": "Daily 9 AM SLA Audit",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -96,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1jQHfrPtqLy78za1Bp1LTWbVPW3luXop3WdWD8_-GYqw",
+          "mode": "list",
+          "cachedResultName": "Support Ticket Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1jQHfrPtqLy78za1Bp1LTWbVPW3luXop3WdWD8_-GYqw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Tickets",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1jQHfrPtqLy78za1Bp1LTWbVPW3luXop3WdWD8_-GYqw/edit#gid=0"
+        },
+        "options": {}
+      },
+      "id": "2a8737c0-9f34-4058-ac50-7ac647cdfaac",
+      "name": "Read Ticket Register",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        128,
+        -16
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OYTXSWW5LQRSZVoK",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const now=Date.now();\nconst overdue=items.filter(({json:t})=>{\n const open=['Open','Triaged','In Progress'].includes(t.Status ?? t.status);\n const created=Date.parse(t['Created At'] ?? t.submittedAt ?? '');\n return open && !Number.isNaN(created) && now-created > 24*60*60*1000;\n});\nreturn overdue.length ? overdue : [{json:{'Ticket ID':'None','Description':'No overdue tickets','Priority':'-', 'Created At':'-'}}];"
+      },
+      "id": "95329728-40d5-4c7f-9715-0e7bed18353e",
+      "name": "Filter Open Tickets Over 24 Hours",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const real=items.filter(i=>i.json['Ticket ID']!=='None');\nconst lines=real.map(i=>`• ${i.json['Ticket ID']} | ${i.json.Priority} | ${i.json['Assigned Team'] ?? 'Unassigned'} | ${i.json.Description}`).join('\\n');\nreturn [{json:{count:real.length,digest:real.length ? lines : 'No tickets have exceeded the 24-hour SLA.'}}];"
+      },
+      "id": "8e273579-3307-428b-af51-655b8a0af2b7",
+      "name": "Build Manager Digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "mismatch9827@gmail.com",
+        "subject": "=🚨 Daily SLA Audit: {{ $json.count }} Overdue Ticket(s)",
+        "message": "=Hello Team,\n\nHere is your daily digest of tickets that have breached the 24-hour SLA:\n\n{{ $json.digest }}\n\nPlease prioritize these immediately!",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        864,
+        -16
+      ],
+      "id": "8733c9d0-7c46-4d08-9de6-50e85ea140e8",
+      "name": "Send a message",
+      "webhookId": "285dd0be-9762-4218-9621-f2d87f373e93",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tlpLluzK9985dvIf",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily 9 AM SLA Audit": {
+      "main": [
+        [
+          {
+            "node": "Read Ticket Register",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Ticket Register": {
+      "main": [
+        [
+          {
+            "node": "Filter Open Tickets Over 24 Hours",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Open Tickets Over 24 Hours": {
+      "main": [
+        [
+          {
+            "node": "Build Manager Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Manager Digest": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a861a9b893c53b1a742f1109903fcd1d0a75c76b66f6810b093a68daa73240de"
+  }
+}
