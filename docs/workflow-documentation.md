@@ -68,7 +68,7 @@ The Streamlit app posts this JSON structure to `support-ticket`:
 
 ## Workflow 01 — Ticket Collection & Ingestion
 
-**File:** `workflows/01-ticket-collection-ingestion.json`  
+**File:** `workflows/01-ticket-collection-ingestion.json`
 **Trigger:** `POST /webhook/support-ticket`
 
 ```mermaid
@@ -89,7 +89,7 @@ flowchart LR
 
 ## Workflow 02 — AI Classification & Priority Triage
 
-**File:** `workflows/02-ai-classification-priority-triage.json`  
+**File:** `workflows/02-ai-classification-priority-triage.json`
 **Trigger:** New row in the `Tickets` sheet
 
 ```mermaid
@@ -142,7 +142,7 @@ URL: http://localhost:5678/webhook/route-ticket
 
 ## Workflow 03 — Smart Escalation & Routing
 
-**File:** `workflows/03-smart-escalation-routing.json`  
+**File:** `workflows/03-smart-escalation-routing.json`
 **Trigger:** `POST /webhook/route-ticket`
 
 ```mermaid
@@ -170,7 +170,7 @@ flowchart LR
 
 ## Workflow 04 — Daily SLA & Overdue Ticket Audit
 
-**File:** `workflows/04-daily-sla-overdue-audit.json`  
+**File:** `workflows/04-daily-sla-overdue-audit.json`
 **Trigger:** Daily schedule at 9:00 AM
 
 ```mermaid
@@ -187,7 +187,7 @@ Set the n8n instance timezone correctly so the 9:00 AM schedule matches your loc
 
 ## Workflow 05 — Feedback & Sentiment Processing
 
-**File:** `workflows/05-feedback-sentiment-processing.json`  
+**File:** `workflows/05-feedback-sentiment-processing.json`
 **Trigger:** `POST /webhook/ticket-feedback`
 
 ```mermaid
@@ -214,7 +214,7 @@ The result is appended to the `Feedback` sheet. Ensure the workflow has access t
 
 ## Workflow 06 — Check Ticket Status
 
-**File:** `workflows/06-check-Ticket-Status.json`  
+**File:** `workflows/06-check-Ticket-Status.json`
 **Trigger:** `POST /webhook/ticket-status`
 
 ```mermaid
