@@ -2,6 +2,8 @@
 
 An AI-powered customer-support automation platform built with **Streamlit**, **n8n**, **Google Gemini**, **Google Sheets**, and **Gmail**. It receives support requests, classifies their urgency, routes them to the right team, monitors SLA risk, and captures customer feedback.
 
+> For the node-by-node technical design, payload contracts, and workflow diagrams, see the [Workflow Documentation](docs/workflow-documentation.md).
+
 ## What it solves
 
 Manual ticket handling creates slow responses, inconsistent priority decisions, missed escalations, and limited visibility into recurring customer problems. SupportFlow AI creates a repeatable workflow from customer request through follow-up.
@@ -40,6 +42,7 @@ flowchart LR
 ```text
 app.py                  Streamlit customer portal
 workflows/              Importable n8n workflow JSON files
+docs/                   Detailed technical workflow documentation
 .env.example            Local webhook configuration template
 requirements.txt        Python dependencies
 ```
